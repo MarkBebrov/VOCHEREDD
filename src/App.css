@@ -1,0 +1,5 @@
+.queue-create-button:hover,
+.queue-create-button:active {
+  background-color: #2688EB !important;
+  box-shadow: 0px 4px 16px rgba(38, 136, 235, 0.4) !important;
+}
