@@ -22,9 +22,12 @@ import QueueMenu from './QueueMenu';
 import api from './api';
 import bridge from '@vkontakte/vk-bridge';
 
+
 function App() {
 
-	
+	const [currentUserAvatar, setCurrentUserAvatar] = useState(null);
+
+
 	const [prevPanel, setPrevPanel] = useState(null);
 
 	const [activePanel, setActivePanel] = useState("main");
@@ -32,12 +35,12 @@ function App() {
 	const goToQueueMenu = () => {
 		setPrevPanel(activePanel);
 		setActivePanel("queueMenu");
-	  };
-	  
-	  const goBack = () => {
+	};
+
+	const goBack = () => {
 		setActivePanel(prevPanel);
-	  };
-	  
+	};
+
 
 	const [modalVisible, setModalVisible] = useState(false);
 	const [queues, setQueues] = useState([]);
@@ -67,15 +70,15 @@ function App() {
 			limit: newQueue.limit,
 			start_date: newQueue.startDate.toISOString(),
 			end_date: newQueue.endDate.toISOString(),
-		  };
-		  console.log(newQueue.startDate);
+		};
+		console.log(newQueue.startDate);
 		api.post(`/api/queues/`, newQueueData)
-		.then((response) => {
-			api.post(`/api/queues/${response.data.id}/users/`, {"id": currentUserId})
-			.then(() => {
-				refreshQueues();
+			.then((response) => {
+				api.post(`/api/queues/${response.data.id}/users/`, { "id": currentUserId })
+					.then(() => {
+						refreshQueues();
+					});
 			});
-		});
 
 	};
 	const [timeUpdate, setTimeUpdate] = useState(0);
@@ -119,7 +122,7 @@ function App() {
 					return (
 						<Cell
 							key={index}
-							before={<Avatar src={queue.creatorAvatar} />}
+							before={<Avatar src={currentUserAvatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
 								borderRadius: 8,
@@ -160,7 +163,7 @@ function App() {
 					return (
 						<Cell
 							key={index}
-							before={<Avatar src={queue.creatorAvatar} />}
+							before={<Avatar src={currentUserAvatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
 								borderRadius: 8,
@@ -186,41 +189,44 @@ function App() {
 	};
 
 	useEffect(() => {
+		bridge.send('VKWebAppGetUserInfo')
+			.then(data => setCurrentUserAvatar(data.photo_100)) // Сохраните аватарку текущего пользователя
+			.catch(error => console.log(error)); // Обработка ошибок
+	}, []);
+
+	useEffect(() => {
 		// Вызывайте функции для отрисовки очередей при обновлении timeUpdate
 		renderActiveQueues();
 		renderUpcomingQueues();
 	}, [queues, timeUpdate]);
 
-	
-
 	useEffect(() => {
-		bridge.send('VKWebAppGetUserInfo')
-			.then(data => setCurrentUserId(data.id))
-			.catch(error => console.log(error)); // Обработка ошибок
+		// Здесь вы должны получить идентификатор текущего пользователя (например, из API)
+		setCurrentUserId(228);
 	}, []);
-		
+
 	useEffect(() => {
 		if (currentUserId !== null) {
 			refreshQueues();
 		}
-		}, [currentUserId]);
-	  
+	}, [currentUserId]);
+
 	const refreshQueues = () => {
-	api.get(`/api/users/${currentUserId}/queues/`)
-		.then((response) => {
-	
-		const newQueues = response.data.map((queue) => {
-			return {
-			title: queue.name,
-			startDate: queue.start_date,
-			endDate: queue.end_date
-			};
-		});
-	
-		setQueues(newQueues);
-		});
+		api.get(`/api/users/${currentUserId}/queues/`)
+			.then((response) => {
+
+				const newQueues = response.data.map((queue) => {
+					return {
+						title: queue.name,
+						startDate: queue.start_date,
+						endDate: queue.end_date
+					};
+				});
+
+				setQueues(newQueues);
+			});
 	};
-	  
+
 
 
 	const modal = (
