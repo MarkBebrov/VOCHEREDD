@@ -116,7 +116,7 @@ return (
 			</div>
 		</Group>
 
-		<Group header={<Header mode="secondary">Меню</Header>}>
+		<Group header={<Header mode="secondary">Очередь</Header>}>
 			<List>
 				{menuItems.map((menuItem, index) => (
 					<Cell
