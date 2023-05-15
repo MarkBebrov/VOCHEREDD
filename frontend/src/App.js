@@ -20,6 +20,7 @@ import Icon24Add from '@vkontakte/icons/dist/24/add';
 import QueueModal from './QueueModal';
 import QueueMenu from './QueueMenu';
 import api from './api';
+import bridge from '@vkontakte/vk-bridge';
 
 function App() {
 
@@ -190,10 +191,13 @@ function App() {
 		renderUpcomingQueues();
 	}, [queues, timeUpdate]);
 
+	
+
 	useEffect(() => {
-		// Здесь вы должны получить идентификатор текущего пользователя (например, из API)
-		setCurrentUserId(228);
-		}, []);
+		bridge.send('VKWebAppGetUserInfo')
+			.then(data => setCurrentUserId(data.id))
+			.catch(error => console.log(error)); // Обработка ошибок
+	}, []);
 		
 	useEffect(() => {
 		if (currentUserId !== null) {
