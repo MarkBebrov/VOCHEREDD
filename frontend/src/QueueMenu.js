@@ -29,7 +29,7 @@ import api from './api';
 
 import '@vkontakte/vkui/dist/vkui.css';
 
-function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUserId}) {
+function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUserId }) {
 
 
 
@@ -49,10 +49,10 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 		setIsAlertShown(false);
 
 		api.delete(`/api/queues/${queue.id}/`)
-		.then((response) => {
-			refreshQueues();
-			goBack();
-		});
+			.then((response) => {
+				refreshQueues();
+				goBack();
+			});
 	};
 
 	const cancelDeleteQueue = () => {
@@ -164,12 +164,13 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 
 	const joinQueue = async () => {
 		const user = await bridge.send('VKWebAppGetUserInfo');
-		
-		api.post(`/api/queues/${queue.id}/move_user/`, {"user_id": currentUserId, "new_position": "end"})
-		.then((response) => {
-			refreshQueues();
-			setUsers();
-		});
+
+		api.post(`/api/queues/${queue.id}/move_user/`, { "user_id": currentUserId, "new_position": "end" })
+			.then((response) => {
+				refreshQueues();
+				goBack();
+				setUsers();
+			});
 	};
 
 	return (
@@ -177,7 +178,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 			<PanelHeader before={<PanelHeaderBack onClick={goBack} />} after={<Avatar size={30} />}>
 				Вочередь!
 			</PanelHeader>
-			
+
 
 			<Group>
 				<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
@@ -323,6 +324,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							padding: '12px 16px',
 						}}
 					>
+						<ButtonGroup>
 						{isQueueActive ? (
 							<Button
 								mode="commerce"
@@ -369,6 +371,22 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 								Очередь недоступна
 							</Button>
 						)}
+													<Button
+								mode="commerce"
+								size="xl"
+								before={<Icon28UserAddBadgeOutline fill="#ffffff" />}
+								style={{
+									width: 50,
+									height: 50,
+									borderRadius: 12,
+									marginLeft: 8,
+									background: '#2688EB',
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
+								onClick={createInviteLink}
+							/>
+						</ButtonGroup>
 					</div>
 				</FixedLayout>
 			)}
@@ -381,12 +399,11 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							borderTopLeftRadius: 12,
 							borderTopRightRadius: 12,
 							display: 'flex',
-							justifyContent: 'space-between',
+							justifyContent: 'center',
 							alignItems: 'center',
 							padding: '12px 16px',
 						}}
 					>
-						{/* ... */}
 						<Button
 							mode="commerce"
 							size="xl"
@@ -405,11 +422,40 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							activeMode="opacity"
 							className="queue-create-button"
 							onClick={joinQueue}
-							disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
 						>
 							Вступить в очередь
 						</Button>
-						{/* ... */}
+						<ButtonGroup>
+							<Button
+								mode="commerce"
+								size="xl"
+								before={<Icon28ShuffleOutline fill="#ffffff" />}
+								style={{
+									width: 50,
+									height: 50,
+									borderRadius: 12,
+									marginLeft: 8,
+									background: '#2688EB',
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
+							/>
+							<Button
+								mode="commerce"
+								size="xl"
+								before={<Icon28UserAddBadgeOutline fill="#ffffff" />}
+								style={{
+									width: 50,
+									height: 50,
+									borderRadius: 12,
+									marginLeft: 8,
+									background: '#2688EB',
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
+								onClick={createInviteLink}
+							/>
+						</ButtonGroup>
 					</div>
 				</FixedLayout>
 			)}
