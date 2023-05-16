@@ -39,9 +39,11 @@ class QueueViewSet(ModelViewSet):
                 return Response({"error": "User is already in the queue"}, status=status.HTTP_400_BAD_REQUEST)
 
             if request.method == 'POST':
-                max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max', 0)
+                max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max')
+                max_position = max_position or 0
                 new_position = max_position + 1
                 QueueUser.objects.create(queue=queue, user=user, position=new_position, is_admin=is_admin, on_queue=on_queue)
+                
             else:
                 queue_user = QueueUser.objects.filter(queue=queue, user=user).first()
                 if queue_user:

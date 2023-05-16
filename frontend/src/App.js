@@ -126,11 +126,11 @@ function App() {
 							before={<Avatar src={queue.avatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
-								borderRadius: 8,
-								marginBottom: 16,
-								marginLeft: 13,
+								borderRadius: 0,
+								marginBottom: 0,
+								marginLeft: 0,
 								marginRight: 13,
-								padding: 16,
+								padding: 0,
 							}}
 							onClick={() => handleQueueClick(queue)}
 						>
@@ -167,11 +167,11 @@ function App() {
 							before={<Avatar src={queue.avatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
-								borderRadius: 8,
-								marginBottom: 16,
-								marginLeft: 13,
+								borderRadius: 0,
+								marginBottom: 0,
+								marginLeft: 0,
 								marginRight: 13,
-								padding: 16,
+								padding: 0,
 							}}
 							onClick={() => handleQueueClick(queue)}
 						>
@@ -290,6 +290,7 @@ function App() {
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'stretch',
+							overflow: 'auto',
 						}}
 					>
 						{queues.length === 0 && (
@@ -303,6 +304,7 @@ function App() {
 						{renderActiveQueues()}
 						{renderUpcomingQueues()}
 					</div>
+
 					<div style={{ zIndex: 10 }}>
 						{modal}
 					</div>
