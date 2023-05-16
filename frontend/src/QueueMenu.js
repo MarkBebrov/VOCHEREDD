@@ -33,6 +33,9 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isAlertShown, setIsAlertShown] = useState(false);
 
+
+
+
 	const deleteQueue = () => {
 		setIsAlertShown(true);
 	};
@@ -79,6 +82,25 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 
 
 	const [isQueueActive, setIsQueueActive] = useState(true);
+
+	useEffect(() => {
+		if (new Date() < new Date(queue.startDate)) {
+			setIsQueueActive(false);
+		} else {
+			setIsQueueActive(true);
+		}
+	}, [queue.startDate]);
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			if (new Date() > new Date(queue.startDate) && !isQueueActive) {
+				setIsQueueActive(true);
+			}
+		}, 1000);
+		return () => clearInterval(interval);
+	}, [queue.startDate, isQueueActive]);
+
+
 	const [notJoinedUsers, setNotJoinedUsers] = useState([]);
 
 	useEffect(() => {
@@ -153,7 +175,7 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 			<PanelHeader before={<PanelHeaderBack onClick={goBack} />} after={<Avatar size={30} />}>
 				Вочередь!
 			</PanelHeader>
-			
+
 
 			<Group>
 				<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
@@ -301,28 +323,52 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 							padding: '12px 16px',
 						}}
 					>
-						<Button
-							mode="commerce"
-							size="xl"
-							style={{
-								background: '#2688EB',
-								borderRadius: 12,
-								color: '#FFFFFF',
-								padding: '12px 16px',
-								flexGrow: 1,
-								marginRight: 8,
-								boxShadow: 'none',
-								transition: 'box-shadow 0.15s ease-in-out',
-							}}
-							before={<Icon24Add fill="#ffffff" />}
-							hoverMode="opacity"
-							activeMode="opacity"
-							className="queue-create-button"
-							onClick={joinQueue}
-							disabled={!isQueueActive}
-						>
-							Вступить в очередь
-						</Button>
+						{isQueueActive ? (
+							<Button
+								mode="commerce"
+								size="xl"
+								style={{
+									background: '#2688EB',
+									borderRadius: 12,
+									color: '#FFFFFF',
+									padding: '12px 16px',
+									flexGrow: 1,
+									marginRight: 8,
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+								}}
+								before={<Icon24Add fill="#ffffff" />}
+								hoverMode="opacity"
+								activeMode="opacity"
+								className="queue-create-button"
+								onClick={joinQueue}
+								disabled={!isQueueActive}
+							>
+								Вступить в очередь
+							</Button>
+						) : (
+							<Button
+								mode="commerce"
+								size="xl"
+								style={{
+									background: '#2688EB',
+									borderRadius: 12,
+									color: '#FFFFFF',
+									padding: '12px 16px',
+									flexGrow: 1,
+									marginRight: 8,
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+								}}
+								before={<Icon24Add fill="#ffffff" />}
+								hoverMode="opacity"
+								activeMode="opacity"
+								className="queue-create-button"
+								disabled
+							>
+								Очередь недоступна
+							</Button>
+						)}
 					</div>
 				</FixedLayout>
 			)}
