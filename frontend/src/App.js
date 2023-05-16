@@ -351,6 +351,8 @@ function App() {
 						goBack={goBack}
 						queue={currentQueue}
 						isUserCreator={() => isUserCreator(currentQueue)}
+						refreshQueues={refreshQueues}
+						currentUserId={currentUserId}
 						props={{
 							queueTitle: currentQueue.title,
 							queueTimeInfo:

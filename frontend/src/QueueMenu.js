@@ -25,10 +25,11 @@ import {
 
 import { Icon24Add, Icon16GearOutline, Icon28ArrowLeftOutline, Icon28ShuffleOutline, Icon28UserAddBadgeOutline, Icon24Delete } from '@vkontakte/icons';
 
+import api from './api';
 
 import '@vkontakte/vkui/dist/vkui.css';
 
-function QueueMenu({ id, goBack, queue, isUserCreator }) {
+function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUserId}) {
 
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isAlertShown, setIsAlertShown] = useState(false);
@@ -38,20 +39,14 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 	};
 
 	const confirmDeleteQueue = async () => {
-		setIsDeleting(true);
+		//setIsDeleting(true);
 		setIsAlertShown(false);
 
-		try {
-			await fetch(`/api/queues/${queue.id}/`, {
-				method: 'DELETE',
-			});
-
-			setIsDeleting(false);
-			goBack(); // Перенаправьте пользователя в главное меню
-		} catch (error) {
-			console.error('Ошибка при удалении очереди:', error);
-			setIsDeleting(false);
-		}
+		api.delete(`/api/queues/${queue.id}/`)
+		.then((response) => {
+			refreshQueues();
+			goBack();
+		});
 	};
 
 	const cancelDeleteQueue = () => {
@@ -81,9 +76,13 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 	const [isQueueActive, setIsQueueActive] = useState(true);
 	const [notJoinedUsers, setNotJoinedUsers] = useState([]);
 
+	const setUsers = () => {
+		setMenuItems(queue.users.filter(user => user.position != null));
+		setNotJoinedUsers(queue.users.filter(user => user.position === null));
+	}
+
 	useEffect(() => {
-		setMenuItems(queue.users);
-		setNotJoinedUsers(queue.users.filter(user => !user.on_queue));
+		setUsers();
 		if (new Date() < new Date(queue.startDate)) {
 			setIsQueueActive(false);
 		} else {
@@ -137,15 +136,12 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 
 	const joinQueue = async () => {
 		const user = await bridge.send('VKWebAppGetUserInfo');
-		setMenuItems((prevItems) => [
-			...prevItems,
-			{
-				id: user.id,
-				firstName: user.first_name,
-				lastName: user.last_name,
-				avatar: user.photo_100,
-			},
-		]);
+		
+		api.post(`/api/queues/${queue.id}/move_user/`, {"user_id": currentUserId, "new_position": "end"})
+		.then((response) => {
+			refreshQueues();
+			setUsers();
+		});
 	};
 
 	return (
@@ -154,7 +150,6 @@ function QueueMenu({ id, goBack, queue, isUserCreator }) {
 				Вочередь!
 			</PanelHeader>
 			
-
 			<Group>
 				<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
 					<Avatar src={queue.avatar} size={80} style={{ marginLeft: 16 }} />

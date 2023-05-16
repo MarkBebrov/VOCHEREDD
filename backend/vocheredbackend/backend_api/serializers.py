@@ -11,7 +11,7 @@ class QueueUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QueueUser
-        fields = ['user', 'position', 'is_admin', 'on_queue']
+        fields = ['user', 'position', 'is_admin']
 
 class QueueSerializer(serializers.ModelSerializer):
     users = QueueUserSerializer(source='queueuser_set', many=True, read_only=True)

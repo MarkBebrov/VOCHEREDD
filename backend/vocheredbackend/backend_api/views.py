@@ -26,56 +26,59 @@ class QueueViewSet(ModelViewSet):
         elif request.method in ['POST', 'DELETE']:
             user_id = request.data.get('user_id')
             is_admin = request.data.get('is_admin', False)
-            on_queue = request.data.get('on_queue', False)
+            position = request.data.get('position', None)
             
             if user_id is None:
-                return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Не указан идентификатор пользователя"}, status=status.HTTP_400_BAD_REQUEST)
             try:
                 user = User.objects.get(id=user_id)
             except User.DoesNotExist:
-                return Response({"error": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
             
             if queue.queueuser_set.filter(user=user).exists():
-                return Response({"error": "User is already in the queue"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Пользователь уже находится в очереди"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if request.method == 'POST':
-                max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max')
-                max_position = max_position or 0
-                new_position = max_position + 1
-                QueueUser.objects.create(queue=queue, user=user, position=new_position, is_admin=is_admin, on_queue=on_queue)
+            if position is not None:
+                QueueViewSet.shift_users(queue, position)  # Перемещаем пользователей в соответствии с новой позицией
+
+            QueueUser.objects.create(queue=queue, user=user, position=position, is_admin=is_admin)
                 
-            else:
-                queue_user = QueueUser.objects.filter(queue=queue, user=user).first()
-                if queue_user:
-                    queue_user.delete()
             return Response(status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def move_user(self, request, pk=None):
         user_id = request.data.get('user_id')
         new_position = request.data.get('new_position')
-        if user_id is None or new_position is None:
-            return Response({"error": "User ID and new position are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if user_id is None:
+            return Response({"error": "Не указан идентификатор пользователя"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"error": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
         
         queue = self.get_object()
         queue_user = QueueUser.objects.filter(queue=queue, user=user).first()
         if queue_user is None:
-            return Response({"error": "User is not in the queue"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Пользователь не находится в очереди"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Update positions of other users
-        QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position')+1)
+        if new_position == "end":
+            max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max')
+            new_position = max_position + 1 if max_position is not None else 1
 
-        # Update the user's position
+        QueueViewSet.shift_users(queue, new_position)  # Перемещаем пользователей в соответствии с новой позицией
+
+        # Обновляем позицию пользователя
         queue_user.position = new_position
         queue_user.save()
 
         return Response(status=status.HTTP_200_OK)
 
-            
+    @staticmethod
+    def shift_users(queue, new_position):
+        # Обновляем позиции остальных пользователей
+        QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position')+1)
+
+                
 
 
 class UserViewSet(ModelViewSet):
