@@ -73,15 +73,9 @@ const queueDescription = queue.type === 'countdown' ? 'До начала' : 'О�
 
 useEffect(() => {
 	if (isUserCreator(queue)) {
-		setMenuItems([
-			{ id: 1, title: 'Параметр 1 (для создателя)', description: 'Описание параметра 1' },
-			{ id: 2, title: 'Параметр 2 (для создателя)', description: 'Описание параметра 2' },
-		]);
+		setMenuItems(queue.users);
 	} else {
-		setMenuItems([
-			{ id: 1, title: 'Параметр 1 (для пользователя)', description: 'Описание параметра 1' },
-			{ id: 2, title: 'Параметр 2 (для пользователя)', description: 'Описание параметра 2' },
-		]);
+		setMenuItems(queue.users);
 	}
 }, [isUserCreator(queue)]);
 
@@ -98,7 +92,7 @@ return (
 
 		<Group>
 			<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
-				<Avatar src="https://via.placeholder.com/80" size={80} style={{ marginLeft: 16 }} />
+				<Avatar src={queue.avatar} size={80} style={{ marginLeft: 16 }} />
 				<div style={{ marginLeft: 16 }}>
 					<Title level="2" weight="semibold">
 						{queueTitle}
@@ -116,7 +110,7 @@ return (
 			</div>
 		</Group>
 
-		<Group header={<Header mode="secondary">Меню</Header>}>
+		<Group header={<Header mode="secondary">Очередь</Header>}>
 			<List>
 				{menuItems.map((menuItem, index) => (
 					<Cell
@@ -129,8 +123,13 @@ return (
 						description={menuItem.description}
 						before={<Avatar src={menuItem.avatar} />}
 						asideContent={<Counter mode="primary">{index + 1}</Counter>}
+						style={{
+							backgroundColor: index % 2 === 1 ? '#F0F0F0' : 'white',
+						  }}
 					>
-						{menuItem.title}
+		
+					{menuItem.lastName} {menuItem.firstName} {menuItem.position}
+						  	
 					</Cell>
 				))}
 			</List>

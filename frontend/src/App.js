@@ -70,11 +70,12 @@ function App() {
 			limit: newQueue.limit,
 			start_date: newQueue.startDate.toISOString(),
 			end_date: newQueue.endDate.toISOString(),
+			creator_id: currentUserId,
 		};
 		console.log(newQueue.startDate);
 		api.post(`/api/queues/`, newQueueData)
 			.then((response) => {
-				api.post(`/api/queues/${response.data.id}/users/`, { "id": currentUserId })
+				api.post(`/api/queues/${response.data.id}/users/`, { "user_id": currentUserId, "is_admin": true })
 					.then(() => {
 						refreshQueues();
 					});
@@ -122,7 +123,7 @@ function App() {
 					return (
 						<Cell
 							key={index}
-							before={<Avatar src={currentUserAvatar} />}
+							before={<Avatar src={queue.avatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
 								borderRadius: 8,
@@ -163,7 +164,7 @@ function App() {
 					return (
 						<Cell
 							key={index}
-							before={<Avatar src={currentUserAvatar} />}
+							before={<Avatar src={queue.avatar} />}
 							style={{
 								backgroundColor: '#FFFFFF',
 								borderRadius: 8,
@@ -201,8 +202,9 @@ function App() {
 	}, [queues, timeUpdate]);
 
 	useEffect(() => {
-		// Здесь вы должны получить идентификатор текущего пользователя (например, из API)
-		setCurrentUserId(228);
+		bridge.send('VKWebAppGetUserInfo')
+			.then(data => setCurrentUserId(data.id))
+			.catch(error => console.log(error)); // Обработка ошибок
 	}, []);
 
 	useEffect(() => {
@@ -214,18 +216,49 @@ function App() {
 	const refreshQueues = () => {
 		api.get(`/api/users/${currentUserId}/queues/`)
 			.then((response) => {
-
 				const newQueues = response.data.map((queue) => {
-					return {
+					const newQueue = {
+						id: queue.id,
 						title: queue.name,
 						startDate: queue.start_date,
-						endDate: queue.end_date
+						endDate: queue.end_date,
+						limit: queue.limit,
+						currentPosition: queue.current_position,
+						creatorId: queue.creator_id,
+						users: queue.users,
+						avatar: null,
 					};
+
+					return bridge
+						.send('VKWebAppGetUserInfo', { user_id: queue.creator_id })
+						.then((data) => {
+							newQueue.avatar = data.photo_100;
+						})
+						.then(() => {
+							return Promise.all(
+								newQueue.users.map((user) => {
+									return bridge
+										.send('VKWebAppGetUserInfo', { user_id: user.user.id })
+										.then((response) => {
+											user.avatar = response.photo_200;
+											user.lastName = response.last_name;
+											user.firstName = response.first_name;
+										});
+								})
+							);
+						})
+						.then(() => newQueue);
 				});
 
-				setQueues(newQueues);
+				Promise.all(newQueues).then((updatedQueues) => {
+					setQueues(updatedQueues);
+				});
+			})
+			.catch((error) => {
+				console.log(error);
 			});
 	};
+
 
 
 
