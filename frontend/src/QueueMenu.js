@@ -324,7 +324,7 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 							padding: '12px 16px',
 						}}
 					>
-						<ButtonGroup>
+						
 						{isQueueActive ? (
 							<Button
 								mode="commerce"
@@ -386,7 +386,6 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								activeMode="opacity"
 								onClick={createInviteLink}
 							/>
-						</ButtonGroup>
 					</div>
 				</FixedLayout>
 			)}

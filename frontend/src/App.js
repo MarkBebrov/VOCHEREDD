@@ -28,12 +28,6 @@ function App() {
 	const [isQueueEnded, setIsQueueEnded] = useState(false);
 
 
-
-
-
-	const [currentUserAvatar, setCurrentUserAvatar] = useState(null);
-
-
 	const [prevPanel, setPrevPanel] = useState(null);
 
 	const [activePanel, setActivePanel] = useState("main");
@@ -60,7 +54,6 @@ function App() {
 			setIsQueueEnded(false);
 		}
 	}, [currentQueue]);
-
 
 
 	const handleQueueClick = (queue) => {
@@ -211,21 +204,55 @@ function App() {
 	};
 
 	useEffect(() => {
-		bridge.send('VKWebAppGetUserInfo')
-			.then(data => setCurrentUserAvatar(data.photo_100)) // Сохраните аватарку текущего пользователя
-			.catch(error => console.log(error)); // Обработка ошибок
-	}, []);
-
-	useEffect(() => {
 		// Вызывайте функции для отрисовки очередей при обновлении timeUpdate
 		renderActiveQueues();
 		renderUpcomingQueues();
 	}, [queues, timeUpdate]);
 
+
+
+	let goToQueueByLink = false;
+
+	bridge.send('VKWebAppGetLaunchParams')
+		.then((launchParams) => {
+			console.log(launchParams);
+
+			if (launchParams && launchParams.action === 'add_to_queue') {
+				goToQueueByLink = true;
+
+				getUserInfo().then(() => {
+					api
+						.post(`/api/queues/${launchParams.queue_id}/users/`, {
+							user_id: currentUserId,
+							is_admin: false,
+						})
+						.then(() => {
+							refreshQueues();
+						});
+				});
+			}
+		})
+		.catch((error) => {
+			console.log(error); // Обработка ошибок
+		});
+
+	const getUserInfo = () => {
+		return bridge
+			.send('VKWebAppGetUserInfo')
+			.then((data) => {
+				setCurrentUserId(data.id);
+			})
+			.catch((error) => {
+				console.log(error); // Обработка ошибок
+			});
+	};
+
 	useEffect(() => {
-		bridge.send('VKWebAppGetUserInfo')
-			.then(data => setCurrentUserId(data.id))
-			.catch(error => console.log(error)); // Обработка ошибок
+		if (!goToQueueByLink) {
+			getUserInfo();
+		} else {
+			goToQueueByLink = false;
+		}
 	}, []);
 
 	useEffect(() => {
@@ -233,6 +260,7 @@ function App() {
 			refreshQueues();
 		}
 	}, [currentUserId]);
+
 
 	const refreshQueues = () => {
 		api.get(`/api/users/${currentUserId}/queues/`)
