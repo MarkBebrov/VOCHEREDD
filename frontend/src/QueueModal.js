@@ -161,7 +161,7 @@ const QueueModal = ({ id, onClose, addQueue }) => {
                     <FormItem
                         top="Начало записи в очередь"
                     >
-                        <div style={{ display: 'flex' }}>
+                        <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
                             <LocaleProvider value={locale}>
                                 <DateInput
                                     value={startDate}
@@ -179,9 +179,9 @@ const QueueModal = ({ id, onClose, addQueue }) => {
                     </FormItem>
                     <FormItem
                         top="Конец записи в очередь"
-                        bottom={<span style={{ color: 'red' }}>{dateError}</span>}
+                        bottom={<span style={{ color: 'red', position: 'relative', zIndex: 1 }}>{dateError}</span>}
                     >
-                        <div style={{ display: 'flex' }}>
+                        <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
                             <LocaleProvider value={locale}>
                                 <DateInput
                                     value={endDate}

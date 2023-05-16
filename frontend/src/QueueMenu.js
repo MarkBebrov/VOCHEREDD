@@ -31,8 +31,14 @@ import '@vkontakte/vkui/dist/vkui.css';
 
 function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUserId}) {
 
+
+
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isAlertShown, setIsAlertShown] = useState(false);
+
+
+
+
 
 	const deleteQueue = () => {
 		setIsAlertShown(true);
@@ -58,10 +64,12 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 
 	const getTimeRemaining = (endDate) => {
 		const total = Date.parse(endDate) - Date.parse(new Date());
-		const seconds = Math.floor((total / 1000) % 60);
-		const minutes = Math.floor((total / 1000 / 60) % 60);
-		const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-		const days = Math.floor(total / (1000 * 60 * 60 * 24));
+		const seconds = Math.max(Math.floor((total / 1000) % 60), 0);
+		const minutes = Math.max(Math.floor((total / 1000 / 60) % 60), 0);
+		const hours = Math.max(Math.floor((total / (1000 * 60 * 60)) % 24), 0);
+		const days = Math.max(Math.floor(total / (1000 * 60 * 60 * 24)), 0);
+
+		const isTimeRemaining = total > 0; // Проверка, осталось ли время
 
 		return {
 			total,
@@ -69,11 +77,29 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 			hours,
 			minutes,
 			seconds,
+			isTimeRemaining, // Добавление флага для проверки оставшегося времени
 		};
 	};
 
 
+
+
 	const [isQueueActive, setIsQueueActive] = useState(true);
+	const isRecordingEnded = !getTimeRemaining(queue.endDate).isTimeRemaining; // Проверка, окончена ли запись
+
+
+
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			if (new Date() > new Date(queue.startDate) && !isQueueActive) {
+				setIsQueueActive(true);
+			}
+		}, 1000);
+		return () => clearInterval(interval);
+	}, [queue.startDate, isQueueActive]);
+
+
 	const [notJoinedUsers, setNotJoinedUsers] = useState([]);
 
 	const setUsers = () => {
@@ -119,7 +145,9 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 	const queueDescription =
 		new Date() < new Date(queue.startDate)
 			? `До начала: ${getTimeRemaining(queue.startDate).days}д ${getTimeRemaining(queue.startDate).hours}ч ${getTimeRemaining(queue.startDate).minutes}м ${getTimeRemaining(queue.startDate).seconds}с`
-			: `Осталось времени: ${getTimeRemaining(queue.endDate).days}д ${getTimeRemaining(queue.endDate).hours}ч ${getTimeRemaining(queue.endDate).minutes}м ${getTimeRemaining(queue.endDate).seconds}с`;
+			: getTimeRemaining(queue.endDate).isTimeRemaining
+				? `Осталось времени: ${getTimeRemaining(queue.endDate).days}д ${getTimeRemaining(queue.endDate).hours}ч ${getTimeRemaining(queue.endDate).minutes}м ${getTimeRemaining(queue.endDate).seconds}с`
+				: <span style={{ color: 'green' }}>Запись окончена</span>; // Оберните "Запись окончена" в <span> и добавьте стиль color: 'green'
 
 
 	const createInviteLink = async () => {
@@ -150,6 +178,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 				Вочередь!
 			</PanelHeader>
 			
+
 			<Group>
 				<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
 					<Avatar src={queue.avatar} size={80} style={{ marginLeft: 16 }} />
@@ -175,7 +204,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 									}}
 									hoverMode="opacity"
 									activeMode="opacity"
-									disabled={!isQueueActive}
+									disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
 								>
 									Вступить в очередь
 								</Button>
@@ -233,9 +262,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 									hoverMode="opacity"
 									activeMode="opacity"
 									disabled={isDeleting}
-								>
-								</Button>
-
+								/>
 							</ButtonGroup>
 						)}
 					</div>
@@ -296,28 +323,52 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							padding: '12px 16px',
 						}}
 					>
-						<Button
-							mode="commerce"
-							size="xl"
-							style={{
-								background: '#2688EB',
-								borderRadius: 12,
-								color: '#FFFFFF',
-								padding: '12px 16px',
-								flexGrow: 1,
-								marginRight: 8,
-								boxShadow: 'none',
-								transition: 'box-shadow 0.15s ease-in-out',
-							}}
-							before={<Icon24Add fill="#ffffff" />}
-							hoverMode="opacity"
-							activeMode="opacity"
-							className="queue-create-button"
-							onClick={joinQueue}
-							disabled={!isQueueActive}
-						>
-							Вступить в очередь
-						</Button>
+						{isQueueActive ? (
+							<Button
+								mode="commerce"
+								size="xl"
+								style={{
+									background: '#2688EB',
+									borderRadius: 12,
+									color: '#FFFFFF',
+									padding: '12px 16px',
+									flexGrow: 1,
+									marginRight: 8,
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+								}}
+								before={<Icon24Add fill="#ffffff" />}
+								hoverMode="opacity"
+								activeMode="opacity"
+								className="queue-create-button"
+								onClick={joinQueue}
+								disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
+							>
+								Вступить в очередь
+							</Button>
+						) : (
+							<Button
+								mode="commerce"
+								size="xl"
+								style={{
+									background: '#2688EB',
+									borderRadius: 12,
+									color: '#FFFFFF',
+									padding: '12px 16px',
+									flexGrow: 1,
+									marginRight: 8,
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+								}}
+								before={<Icon24Add fill="#ffffff" />}
+								hoverMode="opacity"
+								activeMode="opacity"
+								className="queue-create-button"
+								disabled
+							>
+								Очередь недоступна
+							</Button>
+						)}
 					</div>
 				</FixedLayout>
 			)}
@@ -335,6 +386,7 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							padding: '12px 16px',
 						}}
 					>
+						{/* ... */}
 						<Button
 							mode="commerce"
 							size="xl"
@@ -353,40 +405,11 @@ function QueueMenu({id, goBack, queue, isUserCreator, refreshQueues, currentUser
 							activeMode="opacity"
 							className="queue-create-button"
 							onClick={joinQueue}
+							disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
 						>
 							Вступить в очередь
 						</Button>
-						<ButtonGroup>
-							<Button
-								mode="commerce"
-								size="xl"
-								before={<Icon28ShuffleOutline fill="#ffffff" />}
-								style={{
-									width: 50,
-									height: 50,
-									borderRadius: 12,
-									marginLeft: 8,
-									background: '#2688EB',
-								}}
-								hoverMode="opacity"
-								activeMode="opacity"
-							/>
-							<Button
-								mode="commerce"
-								size="xl"
-								before={<Icon28UserAddBadgeOutline fill="#ffffff" />}
-								style={{
-									width: 50,
-									height: 50,
-									borderRadius: 12,
-									marginLeft: 8,
-									background: '#2688EB',
-								}}
-								hoverMode="opacity"
-								activeMode="opacity"
-								onClick={createInviteLink}
-							/>
-						</ButtonGroup>
+						{/* ... */}
 					</div>
 				</FixedLayout>
 			)}
