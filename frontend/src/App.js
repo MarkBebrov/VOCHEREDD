@@ -25,6 +25,12 @@ import bridge from '@vkontakte/vk-bridge';
 
 function App() {
 
+	const [isQueueEnded, setIsQueueEnded] = useState(false);
+
+
+
+
+
 	const [currentUserAvatar, setCurrentUserAvatar] = useState(null);
 
 
@@ -46,6 +52,14 @@ function App() {
 	const [queues, setQueues] = useState([]);
 
 	const [currentQueue, setCurrentQueue] = useState(null);
+
+	useEffect(() => {
+		if (currentQueue && new Date() >= new Date(currentQueue.endDate)) {
+			setIsQueueEnded(true);
+		} else {
+			setIsQueueEnded(false);
+		}
+	}, [currentQueue]);
 
 
 
@@ -117,9 +131,10 @@ function App() {
 
 		return (
 			<Group header={<Title level="3" weight="semibold">Активные очереди</Title>}>
-
 				{activeQueues.map((queue, index) => {
 					const timeRemaining = getTimeRemaining(queue.endDate);
+					const isQueueEnded = new Date() >= new Date(queue.endDate); // Добавьте эту строку
+
 					return (
 						<Cell
 							key={index}
@@ -137,11 +152,17 @@ function App() {
 							<Title level="3" weight="semibold">
 								{queue.title}
 							</Title>
-							<Text style={{ fontSize: '15px', color: 'var(--text_secondary)' }} weight="regular">
-								Осталось времени: {timeRemaining.days}д {timeRemaining.hours}ч {timeRemaining.minutes}м {timeRemaining.seconds}с
+							<Text
+								style={{
+									fontSize: '15px',
+									color: isQueueEnded ? 'green' : 'var(--text_secondary)',
+								}}
+								weight="regular"
+							>
+								{isQueueEnded
+									? 'Запись окончена'
+									: `Осталось времени: ${timeRemaining.days}д ${timeRemaining.hours}ч ${timeRemaining.minutes}м ${timeRemaining.seconds}с`}
 							</Text>
-
-
 						</Cell>
 					);
 				})}
