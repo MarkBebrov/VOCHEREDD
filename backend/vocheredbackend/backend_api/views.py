@@ -23,18 +23,19 @@ class QueueViewSet(ModelViewSet):
             users = queue.queueuser_set.all()
             serializer = QueueUserSerializer(users, many=True)
             return Response(serializer.data)
-        elif request.method in ['POST', 'DELETE']:
+        elif request.method == 'POST':
             user_id = request.data.get('user_id')
             is_admin = request.data.get('is_admin', False)
             position = request.data.get('position', None)
-            
+
             if user_id is None:
                 return Response({"error": "Не указан идентификатор пользователя"}, status=status.HTTP_400_BAD_REQUEST)
             try:
                 user = User.objects.get(id=user_id)
             except User.DoesNotExist:
-                return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
-            
+                 # Если пользователь не существует, создаем нового пользователя
+                user = User.objects.create(id=user_id)
+
             if queue.queueuser_set.filter(user=user).exists():
                 return Response({"error": "Пользователь уже находится в очереди"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -42,8 +43,34 @@ class QueueViewSet(ModelViewSet):
                 QueueViewSet.shift_users(queue, position)  # Перемещаем пользователей в соответствии с новой позицией
 
             QueueUser.objects.create(queue=queue, user=user, position=position, is_admin=is_admin)
-                
+
             return Response(status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            user_id = self.request.query_params.get('user_id', None)
+
+            if user_id is None:
+                return Response({"error": "Не указан идентификатор пользователя"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+            queue_user = queue.queueuser_set.filter(user=user).first()
+
+            if queue_user is None:
+                return Response({"error": "Пользователь не находится в очереди"}, status=status.HTTP_400_BAD_REQUEST)
+
+            QueueViewSet.shift_users(queue, queue_user.position)  # Перемещаем пользователей в соответствии с позициями
+            queue_user.delete()
+
+            return Response(status=status.HTTP_200_OK)
+
+    @staticmethod
+    def shift_users(queue, new_position):
+        # Обновляем позиции остальных пользователей
+        if new_position is not None:
+            QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position') + 1)
 
     @action(detail=True, methods=['post'])
     def move_user(self, request, pk=None):
@@ -71,13 +98,7 @@ class QueueViewSet(ModelViewSet):
         queue_user.position = new_position
         queue_user.save()
 
-        return Response(status=status.HTTP_200_OK)
-
-    @staticmethod
-    def shift_users(queue, new_position):
-        # Обновляем позиции остальных пользователей
-        QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position')+1)
-
+        return Response(status=status.HTTP_200_OK)   
                 
 
 

@@ -47,7 +47,7 @@ const QueueModal = ({ id, onClose, addQueue }) => {
     const [showNeighboringMonth, setShowNeighboringMonth] = useState(false);
     const [disableCalendar, setDisableCalendar] = useState(false);
     const [locale, setLocale] = useState('ru');
-    const [value2, setValue2] = useState(undefined);
+    const [limit, setLimit] = useState(undefined);
 
     const [submitClicked, setSubmitClicked] = useState(false);
 
@@ -80,9 +80,10 @@ const QueueModal = ({ id, onClose, addQueue }) => {
             // Создание новой очереди
             const newQueue = {
                 id: Date.now(),
-                title: queueName,
+                name: queueName,
                 startDate,
                 endDate,
+                limit,
                 activeTab,
                 checkbox1,
                 checkbox2,
@@ -146,13 +147,13 @@ const QueueModal = ({ id, onClose, addQueue }) => {
                     {checkbox1 && (
                         <>
                             <FormItem top="Количество человек">
-                                <Slider step={1} min={0} max={50} value={Number(value2)} onChange={setValue2} />
+                                <Slider step={1} min={0} max={50} value={Number(limit)} onChange={setLimit} />
                             </FormItem>
                             <FormItem>
                                 <Input
                                     min={0}
-                                    value={String(value2)}
-                                    onChange={(e) => setValue2(e.target.value)}
+                                    value={String(limit)}
+                                    onChange={(e) => setLimit(e.target.value)}
                                     type="number"
                                 />
                             </FormItem>

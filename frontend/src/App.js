@@ -21,7 +21,7 @@ import QueueModal from './QueueModal';
 import QueueMenu from './QueueMenu';
 import api from './api';
 import bridge from '@vkontakte/vk-bridge';
-
+import { Icon24RefreshOutline } from '@vkontakte/icons';
 
 function App() {
 
@@ -38,6 +38,7 @@ function App() {
 	};
 
 	const goBack = () => {
+		refreshQueues();
 		setActivePanel(prevPanel);
 	};
 
@@ -73,13 +74,13 @@ function App() {
 	const addQueue = (newQueue) => {
 
 		const newQueueData = {
-			name: newQueue.title,
+			name: newQueue.name,
 			limit: newQueue.limit,
 			start_date: newQueue.startDate.toISOString(),
 			end_date: newQueue.endDate.toISOString(),
 			creator_id: currentUserId,
 		};
-		console.log(newQueue.startDate);
+		console.log(newQueueData);
 		api.post(`/api/queues/`, newQueueData)
 			.then((response) => {
 				api.post(`/api/queues/${response.data.id}/users/`, { "user_id": currentUserId, "is_admin": true })
@@ -143,7 +144,7 @@ function App() {
 							onClick={() => handleQueueClick(queue)}
 						>
 							<Title level="3" weight="semibold">
-								{queue.title}
+								{queue.name}
 							</Title>
 							<Text
 								style={{
@@ -155,6 +156,7 @@ function App() {
 								{isQueueEnded
 									? 'Запись окончена'
 									: `Осталось времени: ${timeRemaining.days}д ${timeRemaining.hours}ч ${timeRemaining.minutes}м ${timeRemaining.seconds}с`}
+								{", участников: " + queue.users.length + "/" + queue.limit}
 							</Text>
 						</Cell>
 					);
@@ -190,10 +192,12 @@ function App() {
 							onClick={() => handleQueueClick(queue)}
 						>
 							<Title level="3" weight="semibold">
-								{queue.title}
+								{queue.name}
 							</Title>
 							<Text style={{ fontSize: '15px', color: 'var(--text_secondary)' }} weight="regular">
 								До начала: {timeRemaining.days}д {timeRemaining.hours}ч {timeRemaining.minutes}м {timeRemaining.seconds}с
+								{", участников: " + queue.users.length + "/" + queue.limit}
+
 							</Text>
 
 						</Cell>
@@ -210,65 +214,56 @@ function App() {
 	}, [queues, timeUpdate]);
 
 
-
-	let goToQueueByLink = false;
-
-	bridge.send('VKWebAppGetLaunchParams')
-		.then((launchParams) => {
-			console.log(launchParams);
-
-			if (launchParams && launchParams.action === 'add_to_queue') {
-				goToQueueByLink = true;
-
-				getUserInfo().then(() => {
-					api
-						.post(`/api/queues/${launchParams.queue_id}/users/`, {
-							user_id: currentUserId,
-							is_admin: false,
-						})
-						.then(() => {
-							refreshQueues();
-						});
-				});
-			}
-		})
-		.catch((error) => {
-			console.log(error); // Обработка ошибок
-		});
-
+	let tempUserId;
 	const getUserInfo = () => {
 		return bridge
 			.send('VKWebAppGetUserInfo')
 			.then((data) => {
 				setCurrentUserId(data.id);
+				tempUserId = data.id;
 			})
 			.catch((error) => {
-				console.log(error); // Обработка ошибок
+				console.log(error);
 			});
-	};
+	}
 
 	useEffect(() => {
-		if (!goToQueueByLink) {
-			getUserInfo();
-		} else {
-			goToQueueByLink = false;
-		}
+		const currentHash = window.location.hash; // Получение текущего значения хэша
+		const firstPart = currentHash.substr(0, 1); // Получение первого символа хэша
+		const secondPart = currentHash.substr(1); // Получение оставшейся части хэша
+		const newHash = firstPart + "&" + secondPart;
+		const linkParams = new URLSearchParams(newHash);
+
+		getUserInfo().then((userId) => {
+			if (linkParams.has("queue_id")) {
+				const queue_id = linkParams.get("queue_id");
+				//api.delete(`/api/queues/3/users/`, { params: { user_id: 252527383 } });
+				api.post(`/api/queues/${queue_id}/users/`, { "user_id": tempUserId }).then(() => {
+					refreshQueuesBy(tempUserId)/*.then((updatedQueues)=>{
+						const queue = updatedQueues.find((queue) => queue.id === queue_id);
+						console.log("queue " + JSON.stringify(updatedQueues, null, 2));
+						goToQueueMenu(queue);
+					});*/
+				});
+			}
+			else {
+				refreshQueuesBy(tempUserId)
+			}
+		})
+
 	}, []);
 
-	useEffect(() => {
-		if (currentUserId !== null) {
-			refreshQueues();
-		}
-	}, [currentUserId]);
-
-
 	const refreshQueues = () => {
-		api.get(`/api/users/${currentUserId}/queues/`)
+		refreshQueuesBy(currentUserId);
+	}
+
+	const refreshQueuesBy = (userId) => {
+		return api.get(`/api/users/${userId}/queues/`)
 			.then((response) => {
 				const newQueues = response.data.map((queue) => {
 					const newQueue = {
 						id: queue.id,
-						title: queue.name,
+						name: queue.name,
 						startDate: queue.start_date,
 						endDate: queue.end_date,
 						limit: queue.limit,
@@ -299,8 +294,9 @@ function App() {
 						.then(() => newQueue);
 				});
 
-				Promise.all(newQueues).then((updatedQueues) => {
+				return Promise.all(newQueues).then((updatedQueues) => {
 					setQueues(updatedQueues);
+					return updatedQueues;
 				});
 			})
 			.catch((error) => {
@@ -364,23 +360,22 @@ function App() {
 								height: 72,
 								borderTopLeftRadius: 12,
 								borderTopRightRadius: 12,
+								display: 'flex',
+								alignItems: 'center',
+								padding: '12px 16px',
 							}}
 						>
 							<Button
 								mode="commerce"
 								size="xl"
 								style={{
-									marginLeft: 16,
-									marginRight: 16,
-									marginTop: 12,
-									marginBottom: 12,
 									background: '#2688EB',
-									borderRadius: 12,
+									borderRadius: '12px',
 									color: '#FFFFFF',
 									padding: '12px 16px',
-									width: 'calc(100% - 32px)',
 									boxShadow: 'none',
 									transition: 'box-shadow 0.15s ease-in-out',
+									flexGrow: 1, // Растягиваем кнопку на всю доступную ширину
 								}}
 								before={<Icon24Add fill="#ffffff" />}
 								onClick={openModal}
@@ -390,8 +385,28 @@ function App() {
 							>
 								Создать очередь
 							</Button>
+							<Button
+								mode="tertiary"
+								size="m"
+								before={<Icon24RefreshOutline />}
+								onClick={refreshQueues}
+								style={{
+									background: '#2688EB',
+									borderRadius: '12px',
+									color: '#FFFFFF',
+									padding: '12px 30px',
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+									marginLeft: '8px', // Добавляем отступ слева
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
+							/>
 						</div>
 					</FixedLayout>
+
+
+
 				</Panel>
 			) : (
 				<>
@@ -403,7 +418,7 @@ function App() {
 						refreshQueues={refreshQueues}
 						currentUserId={currentUserId}
 						props={{
-							queueTitle: currentQueue.title,
+							queueTitle: currentQueue.name,
 							queueTimeInfo:
 								new Date() < new Date(currentQueue.startDate)
 									? `До начала: ${getTimeRemaining(currentQueue.startDate).days}д ${getTimeRemaining(currentQueue.startDate).hours}ч ${getTimeRemaining(currentQueue.startDate).minutes}м ${getTimeRemaining(currentQueue.startDate).seconds}с`

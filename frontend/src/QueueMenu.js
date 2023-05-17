@@ -23,7 +23,7 @@ import {
 	Alert,
 } from '@vkontakte/vkui';
 
-import { Icon24Add, Icon16GearOutline, Icon28ArrowLeftOutline, Icon28ShuffleOutline, Icon28UserAddBadgeOutline, Icon24Delete } from '@vkontakte/icons';
+import { Icon24Add, Icon16GearOutline, Icon28ArrowLeftOutline, Icon28ShuffleOutline, Icon28UserAddBadgeOutline, Icon24Deleteimport, Icon28Backspace, Icon24Delete} from '@vkontakte/icons';
 
 import api from './api';
 
@@ -50,7 +50,6 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 
 		api.delete(`/api/queues/${queue.id}/`)
 			.then((response) => {
-				refreshQueues();
 				goBack();
 			});
 	};
@@ -141,7 +140,7 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 		console.log('Кнопка нажата');
 	};
 
-	const queueTitle = queue.title;
+	const queueTitle = queue.name;
 	const queueDescription =
 		new Date() < new Date(queue.startDate)
 			? `До начала: ${getTimeRemaining(queue.startDate).days}д ${getTimeRemaining(queue.startDate).hours}ч ${getTimeRemaining(queue.startDate).minutes}м ${getTimeRemaining(queue.startDate).seconds}с`
@@ -151,12 +150,7 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 
 
 	const createInviteLink = async () => {
-		const authToken = await bridge.send('VKWebAppGetAuthToken', {
-			app_id: 51635364,
-			scope: 'friends',
-		});
-		const inviteLink = `https://vk.com/app${51635364}_-_${queue.id}?access_token=${authToken.access_token}`;
-
+		const inviteLink = `https://vk.com/app${51580848}#queue_id=${(queue.id)}`;
 		bridge.send('VKWebAppShare', {
 			link: inviteLink,
 		});
@@ -167,7 +161,6 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 
 		api.post(`/api/queues/${queue.id}/move_user/`, { "user_id": currentUserId, "new_position": "end" })
 			.then((response) => {
-				refreshQueues();
 				goBack();
 				setUsers();
 			});
@@ -266,6 +259,28 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								/>
 							</ButtonGroup>
 						)}
+
+								<Button
+									mode="tertiary"
+									size="m"
+									before={<Icon28Backspace />}
+									onClick={() => {
+										api.delete(`/api/queues/${queue.id}/users/`, { params: { user_id: currentUserId }}).then((response) => {
+											goBack();
+										}); 
+									}}
+									style={{
+										background: '#2688EB',
+										borderRadius: 12,
+										color: '#FFFFFF',
+										padding: '12px 30px',
+										boxShadow: 'none',
+										transition: 'box-shadow 0.15s ease-in-out',
+										marginLeft: 10,
+									}}
+									hoverMode="opacity"
+									activeMode="opacity"
+								/>
 					</div>
 				</div>
 			</Group>
