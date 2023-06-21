@@ -69,6 +69,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     'https://localhost:10888',  # Замените на URL вашего фронтенд-приложения
+    'https://prod-app51580848-5831ea45f858.pages-ac.vk-apps.com',
 ]
 
 CORS_ALLOW_METHODS = [
