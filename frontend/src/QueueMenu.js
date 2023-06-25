@@ -21,9 +21,10 @@ import {
 	InfoRow,
 	Counter,
 	Alert,
+	Snackbar,
 } from '@vkontakte/vkui';
 
-import { Icon24Add, Icon16GearOutline, Icon28ArrowLeftOutline, Icon28ShuffleOutline, Icon28UserAddBadgeOutline, Icon24Deleteimport, Icon28Backspace, Icon24Delete} from '@vkontakte/icons';
+import { Icon24Add, Icon16GearOutline, Icon28ErrorCircleOutline, Icon28ArrowLeftOutline, Icon28ShuffleOutline, Icon24RefreshOutline, Icon28UserAddBadgeOutline, Icon24Deleteimport, Icon28Backspace, Icon24Delete} from '@vkontakte/icons';
 
 import api from './api';
 
@@ -35,10 +36,9 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isAlertShown, setIsAlertShown] = useState(false);
+	const [isCurrentUserJoined, setIsCurrentUserJoined] = useState(false);
 
-
-
-
+	const [snackbar, setSnackbar] = useState(null);
 
 	const deleteQueue = () => {
 		setIsAlertShown(true);
@@ -106,6 +106,43 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 		setNotJoinedUsers(queue.users.filter(user => user.position === null));
 	}
 
+	const refreshQueue = async () => {
+
+		api.get(`/api/queues/${queue.id}/`)
+			.then((response) => {
+				queue = response.data
+				setIsCurrentUserJoined(checkIsCurrentUserJoined);
+				setUsers();
+				
+				return Promise.all(
+					queue.users.map((user) => {
+						return bridge
+							.send('VKWebAppGetUserInfo', { user_id: user.user.id })
+							.then((response) => {
+								user.avatar = response.photo_200;
+								user.lastName = response.last_name;
+								user.firstName = response.first_name;
+							});
+					})
+				);
+			})
+	};
+
+	function checkIsCurrentUserJoined() {
+		for (var i = 0; i < queue.users.length; i++) {
+			if (queue.users[i].user.id === currentUserId) {
+				if (queue.users[i].position !== null){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	useEffect(() => {
+		setIsCurrentUserJoined(checkIsCurrentUserJoined);
+	}, []);
+
 	useEffect(() => {
 		setUsers();
 		if (new Date() < new Date(queue.startDate)) {
@@ -157,13 +194,39 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 	};
 
 	const joinQueue = async () => {
-		const user = await bridge.send('VKWebAppGetUserInfo');
+		//const user = await bridge.send('VKWebAppGetUserInfo');
 
 		api.post(`/api/queues/${queue.id}/move_user/`, { "user_id": currentUserId, "new_position": "end" })
 			.then((response) => {
-				goBack();
-				setUsers();
+				if (response.data.message === "Очередь переполнена"){
+					console.log("Очередь переполнена")
+					setSnackbar(
+						<Snackbar
+						  onClose={() => setSnackbar(null)}
+						  before={<Icon28ErrorCircleOutline fill="var(--vkui--color_icon_negative)" />}
+						>
+						  Очередь переполнена
+						</Snackbar>,
+					  );
+				}
+				refreshQueue();
 			});
+	};
+
+	const leaveQueue = async () => {
+		api.post(`/api/queues/${queue.id}/move_user/`, { "user_id": currentUserId, "new_position": null })
+			.then((response) => {
+				refreshQueue();
+			});
+	};
+
+	const shuffle = async () => {
+
+		console.log("shuffle")
+		api.post(`/api/queues/${queue.id}/randomize_users/`)
+			.then((response) => {
+				refreshQueue();
+			})
 	};
 
 	return (
@@ -172,7 +235,8 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 				Вочередь!
 			</PanelHeader>
 
-
+			{snackbar}
+			
 			<Group>
 				<div style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
 					<Avatar src={queue.avatar} size={80} style={{ marginLeft: 16 }} />
@@ -354,14 +418,15 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 									boxShadow: 'none',
 									transition: 'box-shadow 0.15s ease-in-out',
 								}}
-								before={<Icon24Add fill="#ffffff" />}
+
+								disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
+								before={isCurrentUserJoined ?  "" : <Icon24Add fill="#ffffff" />}
 								hoverMode="opacity"
 								activeMode="opacity"
 								className="queue-create-button"
-								onClick={joinQueue}
-								disabled={!isQueueActive || isRecordingEnded} // Добавьте условие !isQueueActive || isRecordingEnded в свойство disabled
-							>
-								Вступить в очередь
+								onClick={isCurrentUserJoined ? leaveQueue : joinQueue}
+						>
+							{isCurrentUserJoined ? "Выйти из очереди" : "Вступить в очередь"}
 							</Button>
 						) : (
 							<Button
@@ -401,6 +466,23 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								activeMode="opacity"
 								onClick={createInviteLink}
 							/>
+								<Button
+								mode="tertiary"
+								size="m"
+								before={<Icon24RefreshOutline />}
+								onClick={refreshQueue}
+								style={{
+									background: '#2688EB',
+									borderRadius: '12px',
+									color: '#FFFFFF',
+									padding: '12px 30px',
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+									marginLeft: '8px', // Добавляем отступ слева
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
+							/>
 					</div>
 				</FixedLayout>
 			)}
@@ -431,13 +513,13 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								boxShadow: 'none',
 								transition: 'box-shadow 0.15s ease-in-out',
 							}}
-							before={<Icon24Add fill="#ffffff" />}
+							before={isCurrentUserJoined ?  "" : <Icon24Add fill="#ffffff" />}
 							hoverMode="opacity"
 							activeMode="opacity"
 							className="queue-create-button"
-							onClick={joinQueue}
+							onClick={isCurrentUserJoined ? leaveQueue : joinQueue}
 						>
-							Вступить в очередь
+							{isCurrentUserJoined ? "Выйти из очереди" : "Вступить в очередь"}
 						</Button>
 						<ButtonGroup>
 							<Button
@@ -453,6 +535,7 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								}}
 								hoverMode="opacity"
 								activeMode="opacity"
+								onClick={shuffle}
 							/>
 							<Button
 								mode="commerce"
@@ -468,6 +551,23 @@ function QueueMenu({ id, goBack, queue, isUserCreator, refreshQueues, currentUse
 								hoverMode="opacity"
 								activeMode="opacity"
 								onClick={createInviteLink}
+							/>
+							<Button
+								mode="tertiary"
+								size="m"
+								before={<Icon24RefreshOutline />}
+								onClick={refreshQueue}
+								style={{
+									background: '#2688EB',
+									borderRadius: '12px',
+									color: '#FFFFFF',
+									padding: '12px 30px',
+									boxShadow: 'none',
+									transition: 'box-shadow 0.15s ease-in-out',
+									marginLeft: '8px', // Добавляем отступ слева
+								}}
+								hoverMode="opacity"
+								activeMode="opacity"
 							/>
 						</ButtonGroup>
 					</div>

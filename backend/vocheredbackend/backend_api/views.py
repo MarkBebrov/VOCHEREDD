@@ -7,6 +7,8 @@ from .models import Queue, QueueUser, User
 from .serializers import QueueSerializer, QueueUserSerializer, UserSerializer
 from django.db.models import F
 from django.db.models import Max
+from random import shuffle
+
 class QueueViewSet(ModelViewSet):
     queryset = Queue.objects.all()
     serializer_class = QueueSerializer
@@ -67,11 +69,28 @@ class QueueViewSet(ModelViewSet):
             return Response(status=status.HTTP_200_OK)
 
     @staticmethod
-    def shift_users(queue, new_position):
+    def shift_users(queue, position):
         # Обновляем позиции остальных пользователей
-        if new_position is not None:
-            QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position') + 1)
+        if position is not None:
+            QueueUser.objects.filter(queue=queue, position__gt=position).update(position=F('position') - 1)
 
+    @action(detail=True, methods=['post'])
+    def randomize_users(self, request, pk=None):
+        queue = self.get_object()
+
+        # Получаем всех пользователей очереди в список
+        users = list(queue.queueuser_set.all())
+
+        # Рандомизируем список пользователей
+        shuffle(users)
+
+        # Проходимся по всем пользователям и обновляем их позиции
+        for new_position, user in enumerate(users, start=1):
+            user.position = new_position
+            user.save()
+
+        return Response(status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['post'])
     def move_user(self, request, pk=None):
         user_id = request.data.get('user_id')
@@ -87,6 +106,9 @@ class QueueViewSet(ModelViewSet):
         queue_user = QueueUser.objects.filter(queue=queue, user=user).first()
         if queue_user is None:
             return Response({"error": "Пользователь не находится в очереди"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if queue.limit is not None and queue.queueuser_set.exclude(position=None).count() >= queue.limit:
+            return Response({"message": "Очередь переполнена"}, status=status.HTTP_200_OK)
         
         if new_position == "end":
             max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max')

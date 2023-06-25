@@ -156,7 +156,7 @@ function App() {
 								{isQueueEnded
 									? 'Запись окончена'
 									: `Осталось времени: ${timeRemaining.days}д ${timeRemaining.hours}ч ${timeRemaining.minutes}м ${timeRemaining.seconds}с`}
-								{", участников: " + queue.users.length + "/" + queue.limit}
+								{", участников: " + queue.users.length  + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")} 
 							</Text>
 						</Cell>
 					);
@@ -196,8 +196,7 @@ function App() {
 							</Title>
 							<Text style={{ fontSize: '15px', color: 'var(--text_secondary)' }} weight="regular">
 								До начала: {timeRemaining.days}д {timeRemaining.hours}ч {timeRemaining.minutes}м {timeRemaining.seconds}с
-								{", участников: " + queue.users.length + "/" + queue.limit}
-
+								{", участников: " + queue.users.length  + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")} 
 							</Text>
 
 						</Cell>
