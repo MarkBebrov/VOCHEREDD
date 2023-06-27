@@ -35,14 +35,14 @@ class QueueViewSet(ModelViewSet):
             try:
                 user = User.objects.get(id=user_id)
             except User.DoesNotExist:
-                 # Если пользователь не существует, создаем нового пользователя
+                # Если пользователь не существует, создаем нового пользователя
                 user = User.objects.create(id=user_id)
 
             if queue.queueuser_set.filter(user=user).exists():
                 return Response({"error": "Пользователь уже находится в очереди"}, status=status.HTTP_400_BAD_REQUEST)
 
             if position is not None:
-                QueueViewSet.shift_users(queue, position)  # Перемещаем пользователей в соответствии с новой позицией
+                QueueViewSet.shift_users(queue, None, position)  # Перемещаем пользователей в соответствии с новой позицией
 
             QueueUser.objects.create(queue=queue, user=user, position=position, is_admin=is_admin)
 
@@ -63,33 +63,45 @@ class QueueViewSet(ModelViewSet):
             if queue_user is None:
                 return Response({"error": "Пользователь не находится в очереди"}, status=status.HTTP_400_BAD_REQUEST)
 
-            QueueViewSet.shift_users(queue, queue_user.position)  # Перемещаем пользователей в соответствии с позициями
+            QueueViewSet.shift_users(queue, queue_user.position, None)  # Перемещаем пользователей в соответствии с позициями
             queue_user.delete()
 
             return Response(status=status.HTTP_200_OK)
 
     @staticmethod
-    def shift_users(queue, position):
-        # Обновляем позиции остальных пользователей
-        if position is not None:
-            QueueUser.objects.filter(queue=queue, position__gt=position).update(position=F('position') - 1)
+    def shift_users(queue, old_position, new_position):
+        # Если старая позиция None, значит мы добавляем нового пользователя в очередь
+        if old_position is None:
+            QueueUser.objects.filter(queue=queue, position__gte=new_position).update(position=F('position') + 1)
+        # Если новая позиция None, значит мы удаляем пользователя из очереди
+        elif new_position is None:
+            QueueUser.objects.filter(queue=queue, position__gt=old_position).update(position=F('position') - 1)
+        else:
+            # Мы перемещаем пользователя внутри очереди
+            if old_position < new_position:
+                # Если пользователь перемещается вниз по очереди, уменьшаем позиции между старой и новой на 1
+                QueueUser.objects.filter(queue=queue, position__gt=old_position, position__lte=new_position).update(position=F('position') - 1)
+            elif old_position > new_position:
+                # Если пользователь перемещается вверх по очереди, увеличиваем позиции между новой и старой на 1
+                QueueUser.objects.filter(queue=queue, position__gte=new_position, position__lt=old_position).update(position=F('position') + 1)
 
     @action(detail=True, methods=['post'])
     def randomize_users(self, request, pk=None):
         queue = self.get_object()
-
-        # Получаем всех пользователей очереди в список
-        users = list(queue.queueuser_set.all())
-
+    
+        # Получаем всех пользователей очереди в список, у которых position не равно None
+        users_with_position = list(queue.queueuser_set.exclude(position=None))
+    
         # Рандомизируем список пользователей
-        shuffle(users)
-
+        shuffle(users_with_position)
+    
         # Проходимся по всем пользователям и обновляем их позиции
-        for new_position, user in enumerate(users, start=1):
+        for new_position, user in enumerate(users_with_position, start=1):
             user.position = new_position
             user.save()
-
+    
         return Response(status=status.HTTP_200_OK)
+
     
     @action(detail=True, methods=['post'])
     def move_user(self, request, pk=None):
@@ -114,15 +126,13 @@ class QueueViewSet(ModelViewSet):
             max_position = queue.queueuser_set.aggregate(Max('position')).get('position__max')
             new_position = max_position + 1 if max_position is not None else 1
 
-        QueueViewSet.shift_users(queue, new_position)  # Перемещаем пользователей в соответствии с новой позицией
+        QueueViewSet.shift_users(queue, queue_user.position, new_position)  # Перемещаем пользователей в соответствии с новой позицией
 
         # Обновляем позицию пользователя
         queue_user.position = new_position
         queue_user.save()
 
-        return Response(status=status.HTTP_200_OK)   
-                
-
+        return Response(status=status.HTTP_200_OK) 
 
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
@@ -166,4 +176,3 @@ class UserViewSet(ModelViewSet):
                 user.queues.remove(queue)
                 queue.users.remove(user)
             return Response(status=status.HTTP_200_OK)
-

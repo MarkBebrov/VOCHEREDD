@@ -7,7 +7,6 @@ import {
 	Button,
 	ModalRoot,
 	FixedLayout,
-	PanelHeaderClose,
 	Avatar,
 	Group,
 	Cell,
@@ -156,7 +155,7 @@ function App() {
 								{isQueueEnded
 									? 'Запись окончена'
 									: `Осталось времени: ${timeRemaining.days}д ${timeRemaining.hours}ч ${timeRemaining.minutes}м ${timeRemaining.seconds}с`}
-								{", участников: " + queue.users.length  + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")} 
+								{", участников: " + queue.users.length + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")}
 							</Text>
 						</Cell>
 					);
@@ -196,7 +195,7 @@ function App() {
 							</Title>
 							<Text style={{ fontSize: '15px', color: 'var(--text_secondary)' }} weight="regular">
 								До начала: {timeRemaining.days}д {timeRemaining.hours}ч {timeRemaining.minutes}м {timeRemaining.seconds}с
-								{", участников: " + queue.users.length  + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")} 
+								{", участников: " + queue.users.length + ", вступило: " + queue.users.filter(user => user.position !== null).length + (queue.limit !== null ? ("/" + queue.limit) : "")}
 							</Text>
 
 						</Cell>
@@ -243,10 +242,13 @@ function App() {
 						console.log("queue " + JSON.stringify(updatedQueues, null, 2));
 						goToQueueMenu(queue);
 					});*/
+				}).catch((error) => {
+					refreshQueuesBy(tempUserId);
 				});
 			}
+			
 			else {
-				refreshQueuesBy(tempUserId)
+				refreshQueuesBy(tempUserId);
 			}
 		})
 
@@ -259,6 +261,7 @@ function App() {
 	const refreshQueuesBy = (userId) => {
 		return api.get(`/api/users/${userId}/queues/`)
 			.then((response) => {
+
 				const newQueues = response.data.map((queue) => {
 					const newQueue = {
 						id: queue.id,
@@ -325,7 +328,7 @@ function App() {
 		<div style={{ background: '#EBEDF0', height: '100vh' }}>
 			{activePanel === "main" ? (
 				<Panel id="panel1">
-					<PanelHeader before={<PanelHeaderClose />} after={<Avatar size={30} />}>
+					<PanelHeader after={<Avatar size={30} />}>
 						Вочередь!
 					</PanelHeader>
 					<div
@@ -390,13 +393,12 @@ function App() {
 								before={<Icon24RefreshOutline />}
 								onClick={refreshQueues}
 								style={{
-									background: '#2688EB',
-									borderRadius: '12px',
 									color: '#FFFFFF',
-									padding: '12px 30px',
-									boxShadow: 'none',
-									transition: 'box-shadow 0.15s ease-in-out',
-									marginLeft: '8px', // Добавляем отступ слева
+									width: 52,
+									height: 52,
+									borderRadius: 12,
+									marginLeft: 10,
+									background: '#2688EB',
 								}}
 								hoverMode="opacity"
 								activeMode="opacity"
